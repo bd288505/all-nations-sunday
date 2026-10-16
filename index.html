@@ -84,12 +84,23 @@
     if (!name) { err.textContent = 'Please enter your first name.'; return; }
     err.textContent = '';
     show('wait');
-    fetch(API, {
-      method: 'POST',
-      credentials: 'omit',
-      body: JSON.stringify({ name: name, token: getToken() })
-    })
-      .then(function (res) { return res.json(); })
+    function send(tries) {
+      return fetch(API, {
+        method: 'POST',
+        credentials: 'omit',
+        body: JSON.stringify({ name: name, token: getToken() })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (!data.ok && tries > 0 && !/name/i.test(data.error || '')) return send(tries - 1);
+          return data;
+        })
+        .catch(function (e) {
+          if (tries > 0) return new Promise(function (ok) { setTimeout(ok, 1500); }).then(function () { return send(tries - 1); });
+          throw e;
+        });
+    }
+    send(2)
       .then(function (data) {
         if (!data.ok) throw new Error(data.error);
         var r = data.result;
