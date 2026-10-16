@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All Nations Sunday Giveaway</title>
+<style>
+  :root { --red:#c8102e; --green:#1b7a3e; --gold:#f2a900; --ink:#1d1d1f; --paper:#fffaf0; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+         background: var(--paper); color: var(--ink); min-height: 100vh;
+         display:flex; align-items:center; justify-content:center; padding: 24px 16px; }
+  .card { width:100%; max-width:420px; background:#fff; border-radius:20px; padding:28px 22px;
+          box-shadow: 0 10px 30px rgba(0,0,0,.08); text-align:center;
+          border-top: 8px solid; border-image: linear-gradient(90deg,var(--red),var(--gold),var(--green)) 1; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color:#555; margin: 0 0 22px; }
+  .globe { font-size: 3rem; margin-bottom: 8px; }
+  input { width:100%; font-size:1.1rem; padding:14px; border:2px solid #ddd; border-radius:12px; margin-bottom:14px; }
+  input:focus { outline:none; border-color: var(--green); }
+  button { width:100%; font-size:1.15rem; font-weight:700; padding:15px; border:0; border-radius:12px;
+           background: var(--green); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.6; }
+  .err { color: var(--red); margin-top: 12px; min-height: 1.2em; }
+  .big { font-size: 3.5rem; margin: 8px 0; }
+  .prize { font-size:1.3rem; font-weight:700; background:#fff4d6; padding:14px; border-radius:12px; margin:14px 0; }
+  .note { color:#444; }
+  .hidden { display:none; }
+  .pulse { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.08); } }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div id="start">
+      <div class="globe">🌍</div>
+      <h1>All Nations Sunday</h1>
+      <p class="sub">Thanks for celebrating with us! Enter your first name to see if you've won a restaurant gift card.</p>
+      <input id="name" placeholder="Your first name" autocomplete="given-name" maxlength="40">
+      <button id="go">Reveal</button>
+      <div id="err" class="err"></div>
+    </div>
+
+    <div id="wait" class="hidden">
+      <div class="big pulse">🎁</div>
+      <p>Checking…</p>
+    </div>
+
+    <div id="win" class="hidden">
+      <div class="big">🎉</div>
+      <h1>Congratulations, <span id="wname"></span>!</h1>
+      <p>You won:</p>
+      <div id="prize" class="prize"></div>
+      <p id="note" class="note"></p>
+    </div>
+
+    <div id="lose" class="hidden">
+      <div class="big">🙏</div>
+      <h1>Not this time, <span id="lname"></span></h1>
+      <p class="note">Thank you for celebrating the global church with us. Enjoy the food and the fellowship!</p>
+    </div>
+  </div>
+
+<script>
+  var API = "https://script.google.com/macros/s/AKfycbwdUpCk7RDSfMl4Kn_f2KOOhaEY6P8m47y7gQ5SBgYLxd8Yi6yZTEth0c9m0tOPUj7z/exec";
+  function getToken() {
+    try {
+      var t = localStorage.getItem('ans_token');
+      if (!t) {
+        t = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('ans_token', t);
+      }
+      return t;
+    } catch (e) { return ''; }
+  }
+  function show(id) {
+    ['start','wait','win','lose'].forEach(function (s) {
+      document.getElementById(s).classList.toggle('hidden', s !== id);
+    });
+  }
+  document.getElementById('go').addEventListener('click', function () {
+    var name = document.getElementById('name').value.trim();
+    var err = document.getElementById('err');
+    if (!name) { err.textContent = 'Please enter your first name.'; return; }
+    err.textContent = '';
+    show('wait');
+    fetch(API, {
+      method: 'POST',
+      credentials: 'omit',
+      body: JSON.stringify({ name: name, token: getToken() })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.ok) throw new Error(data.error);
+        var r = data.result;
+        setTimeout(function () {
+          if (r.won) {
+            document.getElementById('wname').textContent = r.name;
+            document.getElementById('prize').textContent = r.prize;
+            document.getElementById('note').textContent = r.note;
+            show('win');
+          } else {
+            document.getElementById('lname').textContent = r.name;
+            show('lose');
+          }
+        }, 1200);
+      })
+      .catch(function (e) {
+        show('start');
+        err.textContent = (e && e.message && e.message.length < 120) ? e.message : 'Something went wrong. Please try again.';
+      });
+  });
+  document.getElementById('name').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('go').click();
+  });
+</script>
+</body>
+</html>
